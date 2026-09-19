@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-primary: #F98866;
+  --color-primary-dark: #e56b46;
+  --color-primary-deep: #c24b27;
+  --color-secondary: #FFF2D7;
+  --color-bg: #FFFDF9;
+  --color-card: #FFFFFF;
+  --color-text: #211B14;
+  --color-text-light: #56423d;
+  --color-green: #15803d;
+  --color-green-light: #dcfce7;
+  --background: #FFFDF9;
+  --foreground: #211B14;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background-color: #FFFDF9;
+  color: #211B14;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide scrollbar for horizontal scroll areas */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent body scroll when drawer is open */
+body.drawer-open {
+  overflow: hidden;
+}
+
+/* Custom selection color */
+::selection {
+  background-color: #F98866;
+  color: white;
+}
+
+/* Warm shadow utilities */
+.shadow-warm-sm {
+  box-shadow: 0 2px 8px rgba(181, 102, 60, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-warm-md {
+  box-shadow: 0 4px 12px rgba(249, 136, 102, 0.12), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-warm-lg {
+  box-shadow: 0 8px 24px rgba(249, 136, 102, 0.16), 0 4px 8px rgba(0, 0, 0, 0.04);
+}

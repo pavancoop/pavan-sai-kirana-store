@@ -20,13 +20,13 @@ export default function CategoryShowcase({ onCategoryClick }: CategoryShowcasePr
         </div>
       </div>
 
-      {/* Horizontal scroll on mobile, grid on desktop */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 md:grid-cols-7 sm:gap-3">
+      {/* Grid layout on all devices */}
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-8 sm:gap-3">
         {activeCategories.map(category => (
           <button
             key={category.id}
             onClick={() => onCategoryClick(category.id)}
-            className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 bg-white rounded-lg sm:rounded-xl border border-orange-100/80 hover:border-[#F98866]/30 hover:shadow-sm transition-all active:scale-[0.97] group shrink-0 w-[68px] sm:w-auto"
+            className="flex flex-col items-center justify-start gap-1 sm:gap-2 p-2 sm:p-3 md:p-4 bg-white rounded-lg sm:rounded-xl border border-orange-100/80 hover:border-[#F98866]/30 hover:shadow-sm transition-all active:scale-[0.97] group"
           >
             <span className="text-xl sm:text-2xl md:text-3xl group-hover:scale-110 transition-transform">
               {category.icon}

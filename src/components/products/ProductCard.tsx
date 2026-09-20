@@ -11,10 +11,12 @@ interface ProductCardProps {
 // Map category to emoji for visual product placeholder
 function getCategoryEmoji(category: string): string {
   const map: Record<string, string> = {
-    'rice-grains': '🍚',
-    'dal-pulses': '🌾',
+    'rice-grains': '🌾',
+    'dal-pulses': '🥜',
     'oils': '🌻',
+    'fresh-produce': '🍅',
     'spices-masalas': '🌶️',
+    'pooja-religious': '🔔',
     'biscuits-snacks': '🍪',
     'beverages': '🥤',
     'tea-coffee': '☕',

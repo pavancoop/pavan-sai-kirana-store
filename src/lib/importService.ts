@@ -64,8 +64,9 @@ async function processImportData(rows: any[]): Promise<ImportResult> {
         continue;
       }
 
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      
+      const weightRaw = String(row['Weight'] || row['weight'] || '1');
+      const weightSlug = weightRaw.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${weightSlug}`;
       const sellingPrice = parseFloat(row['Selling Price'] || row['Price'] || row['sellingPrice'] || '0');
       const mrp = parseFloat(row['MRP'] || row['mrp'] || '0');
       

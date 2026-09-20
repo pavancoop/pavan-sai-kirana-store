@@ -12,7 +12,7 @@ export const categories: Category[] = [
   { id: 'packaged-foods', name: 'Packaged Foods', slug: 'packaged-foods', icon: '📦', productCount: 0, isActive: true, sortOrder: 9 },
   { id: 'personal-care', name: 'Personal Care', slug: 'personal-care', icon: '🧴', productCount: 0, isActive: true, sortOrder: 10 },
   { id: 'household', name: 'Household', slug: 'household', icon: '🏠', productCount: 0, isActive: true, sortOrder: 11 },
-  { id: 'cleaning-products', name: 'Cleaning Products', slug: 'cleaning-products', icon: '🧹', productCount: 0, isActive: true, sortOrder: 12 },
+  { id: 'cleaning-products', name: 'Cleaning Products', slug: 'cleaning-products', icon: '🧼', productCount: 0, isActive: true, sortOrder: 12 },
   { id: 'baby-products', name: 'Baby Products', slug: 'baby-products', icon: '👶', productCount: 0, isActive: true, sortOrder: 13 },
   { id: 'other', name: 'Other', slug: 'other', icon: '📋', productCount: 0, isActive: true, sortOrder: 14 },
 ];

@@ -22,7 +22,7 @@ function getCategoryEmoji(category: string): string {
     'packaged-foods': '📦',
     'personal-care': '🧴',
     'household': '🏠',
-    'cleaning-products': '🫧',
+    'cleaning-products': '🧼',
     'baby-products': '👶',
     'other': '📋',
   };

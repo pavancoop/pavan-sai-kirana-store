@@ -227,7 +227,7 @@ export default function AdminProductsPage() {
                   <tr key={product.id} className="hover:bg-stone-50 transition-colors">
                     <td className="p-4">
                       <div className="font-medium text-slate-900">{product.name}</div>
-                      <div className="text-xs text-slate-500">{product.weight} {product.unit}</div>
+                      <div className="text-xs text-slate-500">{product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`}</div>
                     </td>
                     <td className="p-4">
                       <span className="px-2 py-1 bg-stone-100 rounded text-xs">{product.category}</span>

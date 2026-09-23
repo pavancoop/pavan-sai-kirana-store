@@ -53,7 +53,7 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
         ...prev, 
         imageUrl: url, 
         image: url, // Sync legacy
-        imageSource: 'FIREBASE', // Or CLOUDINARY if swapped
+        imageSource: 'CLOUDINARY',
         imageStatus: 'REAL_IMAGE' 
       }));
     } catch (err: any) {

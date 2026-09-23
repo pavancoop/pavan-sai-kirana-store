@@ -1,59 +1,54 @@
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app, isFirebaseConfigured } from './firebase';
 
 /**
  * ImageService abstraction.
- * Currently uses Firebase Storage, but is designed to be easily swapped 
- * with Cloudinary or another external CDN without affecting the rest of the application.
+ * Uses Cloudinary unsigned upload for product images.
  */
 
 export async function uploadProductImage(file: File): Promise<string> {
-  if (!isFirebaseConfigured()) {
-    throw new Error('Firebase Storage is not configured.');
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error('Cloudinary environment variables are missing.');
   }
 
-  // Basic client-side validation
+  // Validation
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   if (!validTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Only JPG, PNG, and WEBP are supported.');
+    throw new Error('Invalid file type. Only JPG, JPEG, PNG, and WEBP are supported.');
   }
 
-  // Size warning/compression could go here. 
-  // Currently, we'll reject files over 3MB to prevent bloat until a compressor is added.
-  if (file.size > 3 * 1024 * 1024) {
-    throw new Error('File is too large. Please upload an image under 3MB.');
+  // 5 MB limit
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('File is too large. Please upload an image under 5MB.');
   }
 
-  const storage = getStorage(app!);
-  // Generate a unique filename: timestamp + random + extension
-  const ext = file.name.split('.').pop() || 'jpg';
-  const filename = `products/prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-  const storageRef = ref(storage, filename);
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
 
-  const snapshot = await uploadBytes(storageRef, file);
-  const downloadUrl = await getDownloadURL(snapshot.ref);
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
 
-  return downloadUrl;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || 'Failed to upload image to Cloudinary.');
+  }
+
+  const data = await response.json();
+  return data.secure_url;
 }
 
 export async function deleteProductImage(imageUrl: string): Promise<void> {
-  if (!imageUrl || !isFirebaseConfigured()) return;
-  
-  // Only attempt to delete if it's a Firebase Storage URL
-  if (!imageUrl.includes('firebasestorage.googleapis.com')) {
-    return;
-  }
-
-  try {
-    const storage = getStorage(app!);
-    // Firebase Storage URLs contain the full path encoded in the URL.
-    // We can just create a ref from the URL itself.
-    const fileRef = ref(storage, imageUrl);
-    await deleteObject(fileRef);
-  } catch (error) {
-    console.error('Failed to delete image from storage:', error);
-    // We swallow the error because if the image is missing, we don't want to break the app.
-  }
+  // We do not delete the old Cloudinary image when replacing an image yet. 
+  // Safe cleanup will be implemented later.
+  return Promise.resolve();
 }
 
 export function validateImageUrl(url: string): boolean {

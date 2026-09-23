@@ -88,10 +88,17 @@ export function resolveProductImage(product: Product | ProductGroup): ResolvedIm
   const isReal = product.imageStatus === 'REAL_IMAGE' || (!product.imageStatus && actualUrl);
 
   if (isReal && actualUrl) {
+    let finalUrl = actualUrl;
+    
+    // Inject Cloudinary optimizations if it's a Cloudinary URL and doesn't already have them
+    if (finalUrl.includes('res.cloudinary.com') && !finalUrl.includes('/upload/f_auto,q_auto')) {
+      finalUrl = finalUrl.replace('/upload/', '/upload/f_auto,q_auto,c_limit,w_800,h_800/');
+    }
+
     // Attach version for cache busting if available
     const versionedUrl = product.imageUpdatedAt 
-      ? `${actualUrl}${actualUrl.includes('?') ? '&' : '?'}v=${product.imageUpdatedAt}` 
-      : actualUrl;
+      ? `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}v=${product.imageUpdatedAt}` 
+      : finalUrl;
       
     return { type: 'image', src: versionedUrl };
   }

@@ -35,7 +35,7 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
   const searchResults = searchQuery.trim() === '' ? [] : products.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.searchKeywords && p.searchKeywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
-  ).slice(0, 5); // Show top 5 results
+  ).slice(0, 15); // Show top 15 results
 
   return (
     <>
@@ -119,7 +119,9 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
                           </div>
                           <div>
                             <p className="text-sm font-bold text-slate-800 line-clamp-1">{product.name}</p>
-                            <p className="text-xs text-slate-500">{product.weight} {product.unit} • {formatPrice(product.sellingPrice)}</p>
+                            <p className="text-xs text-slate-500">
+                              {product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`} • {formatPrice(product.sellingPrice)}
+                            </p>
                           </div>
                         </div>
                         <div className="shrink-0 ml-2">
@@ -225,7 +227,9 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
                         </div>
                         <div className="min-w-0">
                           <p className="text-[13px] font-bold text-slate-800 truncate">{product.name}</p>
-                          <p className="text-[11px] text-slate-500">{product.weight} {product.unit} • {formatPrice(product.sellingPrice)}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`} • {formatPrice(product.sellingPrice)}
+                          </p>
                         </div>
                       </div>
                       <div className="shrink-0 ml-2">

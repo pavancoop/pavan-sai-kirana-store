@@ -108,7 +108,25 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
-                <input required type="text" name="category" value={formData.category} onChange={handleChange} className="w-full border-stone-300 rounded-lg p-2 text-sm" />
+                <select required name="category" value={formData.category} onChange={handleChange} className="w-full border-stone-300 rounded-lg p-2 text-sm bg-white">
+                  <option value="">Select Category</option>
+                  <option value="rice-grains">Rice & Grains</option>
+                  <option value="dal-pulses">Dal & Pulses</option>
+                  <option value="oils">Oils</option>
+                  <option value="fresh-produce">Fresh Produce</option>
+                  <option value="spices-masalas">Spices & Masalas</option>
+                  <option value="pooja-religious">Pooja & Religious</option>
+                  <option value="biscuits-snacks">Biscuits & Snacks</option>
+                  <option value="beverages">Beverages</option>
+                  <option value="tea-coffee">Tea & Coffee</option>
+                  <option value="breakfast-items">Breakfast Items</option>
+                  <option value="packaged-foods">Packaged Foods</option>
+                  <option value="personal-care">Personal Care</option>
+                  <option value="household">Household</option>
+                  <option value="cleaning-products">Cleaning Products</option>
+                  <option value="baby-products">Baby Products</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Subcategory</label>

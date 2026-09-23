@@ -9,6 +9,9 @@ export async function uploadProductImage(file: File): Promise<string> {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
+  console.log('Cloudinary Cloud Name:', cloudName);
+  console.log('Cloudinary Upload Preset:', uploadPreset);
+
   if (!cloudName || !uploadPreset) {
     throw new Error('Cloudinary environment variables are missing.');
   }

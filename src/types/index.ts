@@ -15,6 +15,7 @@ export interface Product {
   imageSource?: 'FIREBASE' | 'CLOUDINARY' | 'EXTERNAL_URL' | 'GENERATED' | 'CATEGORY';
   imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
   imageUpdatedAt?: number;
+  additionalImages?: string[];
   stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock';
   stockQuantity: number;
   description: string;
@@ -33,6 +34,7 @@ export interface ProductGroup {
   imageSource?: 'FIREBASE' | 'CLOUDINARY' | 'EXTERNAL_URL' | 'GENERATED' | 'CATEGORY';
   imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
   imageUpdatedAt?: number;
+  additionalImages?: string[];
   variants: Product[]; // The individual items (weights)
   minPrice: number; // For "Starts from ₹XX" display
   maxDiscount: number;

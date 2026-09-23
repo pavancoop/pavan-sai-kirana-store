@@ -27,6 +27,7 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
     imageUrl: product?.imageUrl || product?.image || '',
     imageSource: product?.imageSource || (product?.image ? 'FIREBASE' : 'GENERATED'),
     imageStatus: product?.imageStatus || (product?.image ? 'REAL_IMAGE' : 'GENERATED_PLACEHOLDER'),
+    additionalImages: product?.additionalImages || [],
     stockStatus: product?.stockStatus || 'in_stock',
     stockQuantity: product?.stockQuantity || 100,
     description: product?.description || '',
@@ -88,6 +89,33 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
     }));
   };
 
+  const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const url = await uploadProductImage(file);
+      setFormData(prev => ({ 
+        ...prev, 
+        additionalImages: [...prev.additionalImages, url]
+      }));
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Failed to upload additional image.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAdditionalImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalImages: prev.additionalImages.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -105,6 +133,7 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
         discount,
         slug,
         imageUpdatedAt: Date.now(), // update timestamp for caching
+        additionalImages: formData.additionalImages,
         searchKeywords: formData.searchKeywords.split(',').map(k => k.trim()).filter(Boolean)
       });
     } catch (err) {
@@ -271,6 +300,39 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
                     >
                       Remove Image
                     </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Images Gallery */}
+              <div className="pt-4 border-t border-stone-200 mt-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">Additional Images Gallery (Optional)</label>
+                <div className="flex flex-wrap gap-3">
+                  {formData.additionalImages.map((img, index) => (
+                    <div key={index} className="w-20 h-20 relative rounded-lg border border-stone-200 overflow-hidden bg-white group">
+                      <img src={img} alt={`Gallery ${index}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAdditionalImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {formData.additionalImages.length < 5 && (
+                    <label className="w-20 h-20 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 hover:bg-stone-100 flex flex-col items-center justify-center cursor-pointer transition-colors text-stone-500">
+                      <input 
+                        type="file" 
+                        accept="image/jpeg, image/png, image/webp"
+                        onChange={handleAdditionalImageUpload}
+                        disabled={isUploading}
+                        className="hidden" 
+                      />
+                      <span className="text-xl leading-none mb-1">+</span>
+                      <span className="text-[10px] font-bold">Add</span>
+                    </label>
                   )}
                 </div>
               </div>

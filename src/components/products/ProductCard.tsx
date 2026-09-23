@@ -53,9 +53,24 @@ export default function ProductCard({ product: group }: ProductCardProps) {
         )}
 
         {/* Product Visual / Icon Box */}
-        <div className="w-full aspect-[4/3] sm:aspect-square max-h-24 sm:max-h-36 rounded-lg sm:rounded-xl bg-gradient-to-b from-[#FFFDF9] to-[#FFF2D7]/40 flex items-center justify-center overflow-hidden mb-2 sm:mb-3 border border-orange-50 select-none">
+        <div className="w-full aspect-[4/3] sm:aspect-square max-h-24 sm:max-h-36 rounded-lg sm:rounded-xl bg-gradient-to-b from-[#FFFDF9] to-[#FFF2D7]/40 flex items-center justify-center overflow-hidden mb-2 sm:mb-3 border border-orange-50 select-none relative">
           {resolvedImage.type === 'image' ? (
-            <img src={resolvedImage.src} alt={group.name} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" loading="lazy" />
+            <>
+              <img 
+                src={resolvedImage.src} 
+                alt={group.name} 
+                className={`w-full h-full object-cover transition-all duration-500 ${group.additionalImages && group.additionalImages.length > 0 ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`} 
+                loading="lazy" 
+              />
+              {group.additionalImages && group.additionalImages.length > 0 && (
+                <img 
+                  src={group.additionalImages[0]} 
+                  alt={`${group.name} alternate`} 
+                  className="w-full h-full object-cover transition-all duration-500 absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105" 
+                  loading="lazy" 
+                />
+              )}
+            </>
           ) : (
             <span className="text-3xl sm:text-5xl opacity-90 transition-transform group-hover:scale-110 duration-300">{resolvedImage.src}</span>
           )}

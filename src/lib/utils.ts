@@ -46,6 +46,16 @@ export function groupProductsByName(products: Product[]): ProductGroup[] {
       group.imageStatus = product.imageStatus;
       group.imageUpdatedAt = product.imageUpdatedAt;
     }
+    
+    // Collect unique additional images
+    if (product.additionalImages && product.additionalImages.length > 0) {
+      if (!group.additionalImages) group.additionalImages = [];
+      product.additionalImages.forEach(img => {
+        if (!group.additionalImages!.includes(img)) {
+          group.additionalImages!.push(img);
+        }
+      });
+    }
   });
 
   // Sort variants within each group (e.g. by selling price ascending, which loosely correlates to weight)

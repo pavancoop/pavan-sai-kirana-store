@@ -3,7 +3,8 @@
 import { ProductGroup, Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
-import { useEffect } from 'react';
+import { resolveProductImage } from '@/lib/imageResolver';
+import { useState, useEffect } from 'react';
 
 interface VariantSelectorDialogProps {
   group: ProductGroup;
@@ -12,6 +13,7 @@ interface VariantSelectorDialogProps {
 
 export default function VariantSelectorDialog({ group, onClose }: VariantSelectorDialogProps) {
   const { addItem, decrementItem, getItemQuantity } = useCart();
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Prevent background scroll when open
   useEffect(() => {
@@ -19,14 +21,19 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  const resolvedImage = resolveProductImage(group);
+  const allImages = [];
+  if (resolvedImage.type === 'image') allImages.push(resolvedImage.src);
+  if (group.additionalImages) allImages.push(...group.additionalImages);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
       <div 
-        className="w-full sm:w-[400px] max-h-[85vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200"
+        className="w-full sm:w-[400px] max-h-[90vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 relative z-10 bg-white">
           <div>
             <h3 className="font-extrabold text-slate-900 text-lg line-clamp-1">{group.name}</h3>
             {group.brand && <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{group.brand}</p>}
@@ -40,6 +47,37 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
             </svg>
           </button>
         </div>
+
+        {/* Image Gallery Carousel */}
+        {allImages.length > 0 ? (
+          <div className="w-full aspect-[4/3] bg-stone-50 relative border-b border-stone-100 flex-shrink-0 group overflow-hidden">
+            <div 
+              className="flex w-full h-full transition-transform duration-300 ease-out snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+              onScroll={(e) => {
+                const scrollLeft = (e.target as HTMLDivElement).scrollLeft;
+                const width = (e.target as HTMLDivElement).clientWidth;
+                setActiveImageIndex(Math.round(scrollLeft / width));
+              }}
+            >
+              {allImages.map((src, i) => (
+                <div key={i} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4">
+                  <img src={src} alt={`${group.name} - ${i + 1}`} className="w-full h-full object-contain drop-shadow-sm" />
+                </div>
+              ))}
+            </div>
+            {allImages.length > 1 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                {allImages.map((_, i) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === activeImageIndex ? 'bg-orange-500 w-3' : 'bg-stone-300'}`} />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full aspect-[4/3] bg-stone-50 flex flex-col items-center justify-center border-b border-stone-100 flex-shrink-0">
+            <span className="text-6xl opacity-80 mb-2">{resolvedImage.src}</span>
+          </div>
+        )}
 
         {/* Variants List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">

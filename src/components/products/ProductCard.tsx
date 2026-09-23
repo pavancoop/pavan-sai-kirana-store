@@ -5,32 +5,10 @@ import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/lib/utils';
 import { useState } from 'react';
 import VariantSelectorDialog from './VariantSelectorDialog';
+import { resolveProductImage } from '@/lib/imageResolver';
 
 interface ProductCardProps {
   product: ProductGroup; // Passed a ProductGroup now
-}
-
-// Map category to emoji for visual product placeholder
-function getCategoryEmoji(category: string): string {
-  const map: Record<string, string> = {
-    'rice-grains': '🌾',
-    'dal-pulses': '🥜',
-    'oils': '🌻',
-    'fresh-produce': '🍅',
-    'spices-masalas': '🌶️',
-    'pooja-religious': '🔔',
-    'biscuits-snacks': '🍪',
-    'beverages': '🥤',
-    'tea-coffee': '☕',
-    'breakfast-items': '🥣',
-    'packaged-foods': '📦',
-    'personal-care': '🧴',
-    'household': '🏠',
-    'cleaning-products': '🧼',
-    'baby-products': '👶',
-    'other': '📋',
-  };
-  return map[category] || '🛒';
 }
 
 export default function ProductCard({ product: group }: ProductCardProps) {
@@ -55,6 +33,8 @@ export default function ProductCard({ product: group }: ProductCardProps) {
     }
   };
 
+  const resolvedImage = resolveProductImage(group);
+
   return (
     <>
       <div className={`bg-white rounded-xl sm:rounded-2xl border border-orange-100/90 shadow-sm hover:shadow-md transition-shadow p-2.5 sm:p-4 flex flex-col justify-between relative group ${isOutOfStock ? 'opacity-60' : ''}`}>
@@ -74,10 +54,10 @@ export default function ProductCard({ product: group }: ProductCardProps) {
 
         {/* Product Visual / Icon Box */}
         <div className="w-full aspect-[4/3] sm:aspect-square max-h-24 sm:max-h-36 rounded-lg sm:rounded-xl bg-gradient-to-b from-[#FFFDF9] to-[#FFF2D7]/40 flex items-center justify-center overflow-hidden mb-2 sm:mb-3 border border-orange-50 select-none">
-          {group.image ? (
-            <img src={group.image} alt={group.name} className="w-full h-full object-cover" />
+          {resolvedImage.type === 'image' ? (
+            <img src={resolvedImage.src} alt={group.name} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" loading="lazy" />
           ) : (
-            <span className="text-3xl sm:text-5xl">{getCategoryEmoji(group.category)}</span>
+            <span className="text-3xl sm:text-5xl opacity-90 transition-transform group-hover:scale-110 duration-300">{resolvedImage.src}</span>
           )}
         </div>
 

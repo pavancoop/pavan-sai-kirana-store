@@ -10,7 +10,11 @@ export interface Product {
   sellingPrice: number;
   mrp: number;
   discount: number;
-  image: string;
+  image: string; // Legacy field, kept for backward compatibility
+  imageUrl?: string;
+  imageSource?: 'FIREBASE' | 'CLOUDINARY' | 'EXTERNAL_URL' | 'GENERATED' | 'CATEGORY';
+  imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
+  imageUpdatedAt?: number;
   stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock';
   stockQuantity: number;
   description: string;
@@ -24,7 +28,11 @@ export interface ProductGroup {
   name: string;
   brand: string;
   category: string;
-  image: string;
+  image: string; // Legacy field
+  imageUrl?: string;
+  imageSource?: 'FIREBASE' | 'CLOUDINARY' | 'EXTERNAL_URL' | 'GENERATED' | 'CATEGORY';
+  imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
+  imageUpdatedAt?: number;
   variants: Product[]; // The individual items (weights)
   minPrice: number; // For "Starts from ₹XX" display
   maxDiscount: number;

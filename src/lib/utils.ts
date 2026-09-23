@@ -16,6 +16,9 @@ export function groupProductsByName(products: Product[]): ProductGroup[] {
         brand: product.brand,
         category: product.category,
         image: product.image,
+        imageUrl: product.imageUrl,
+        imageSource: product.imageSource,
+        imageStatus: product.imageStatus,
         variants: [],
         minPrice: product.sellingPrice,
         maxDiscount: product.discount,
@@ -29,7 +32,20 @@ export function groupProductsByName(products: Product[]): ProductGroup[] {
     if (product.sellingPrice < group.minPrice) group.minPrice = product.sellingPrice;
     if (product.discount > group.maxDiscount) group.maxDiscount = product.discount;
     // Prefer image if current group has none
-    if (!group.image && product.image) group.image = product.image;
+    if (!group.image && product.image) {
+      group.image = product.image;
+      group.imageUrl = product.imageUrl;
+      group.imageSource = product.imageSource;
+      group.imageStatus = product.imageStatus;
+      group.imageUpdatedAt = product.imageUpdatedAt;
+    }
+    // Prefer actual imageUrl if only legacy image exists
+    if (!group.imageUrl && product.imageUrl) {
+      group.imageUrl = product.imageUrl;
+      group.imageSource = product.imageSource;
+      group.imageStatus = product.imageStatus;
+      group.imageUpdatedAt = product.imageUpdatedAt;
+    }
   });
 
   // Sort variants within each group (e.g. by selling price ascending, which loosely correlates to weight)

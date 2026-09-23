@@ -80,6 +80,8 @@ async function processImportData(rows: any[]): Promise<ImportResult> {
       const activeRaw = row['Active'] || row['isActive'];
       const isActive = activeRaw === undefined ? true : String(activeRaw).toLowerCase() !== 'false' && String(activeRaw) !== '0';
 
+      const imageUrl = row['Image URL'] || row['Image'] || row['image'] || '';
+      
       const productData: Omit<Product, 'id'> = {
         name,
         slug,
@@ -91,7 +93,11 @@ async function processImportData(rows: any[]): Promise<ImportResult> {
         sellingPrice,
         mrp,
         discount,
-        image: row['Image URL'] || row['Image'] || row['image'] || '',
+        image: imageUrl, // legacy sync
+        imageUrl,
+        imageSource: imageUrl ? 'EXTERNAL_URL' : 'GENERATED',
+        imageStatus: imageUrl ? 'REAL_IMAGE' : 'GENERATED_PLACEHOLDER',
+        imageUpdatedAt: Date.now(),
         stockStatus: 'in_stock', // Default for import
         stockQuantity: 100,
         description: row['Description'] || row['description'] || '',

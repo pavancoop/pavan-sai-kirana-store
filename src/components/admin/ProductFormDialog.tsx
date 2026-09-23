@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Product } from '@/types';
-import { uploadProductImage } from '@/lib/storageService';
+import { uploadProductImage, validateImageUrl, deleteProductImage } from '@/lib/imageService';
 
 interface ProductFormDialogProps {
   product?: Product;
@@ -11,6 +11,7 @@ interface ProductFormDialogProps {
 export default function ProductFormDialog({ product, onClose, onSave }: ProductFormDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -22,7 +23,10 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
     unit: product?.unit || 'kg',
     sellingPrice: product?.sellingPrice || 0,
     mrp: product?.mrp || 0,
-    image: product?.image || '',
+    image: product?.image || '', // Legacy
+    imageUrl: product?.imageUrl || product?.image || '',
+    imageSource: product?.imageSource || (product?.image ? 'FIREBASE' : 'GENERATED'),
+    imageStatus: product?.imageStatus || (product?.image ? 'REAL_IMAGE' : 'GENERATED_PLACEHOLDER'),
     stockStatus: product?.stockStatus || 'in_stock',
     stockQuantity: product?.stockQuantity || 100,
     description: product?.description || '',
@@ -45,13 +49,43 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
     try {
       setIsUploading(true);
       const url = await uploadProductImage(file);
-      setFormData(prev => ({ ...prev, image: url }));
-    } catch (err) {
+      setFormData(prev => ({ 
+        ...prev, 
+        imageUrl: url, 
+        image: url, // Sync legacy
+        imageSource: 'FIREBASE', // Or CLOUDINARY if swapped
+        imageStatus: 'REAL_IMAGE' 
+      }));
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to upload image. Ensure Firebase Storage is enabled and rules allow writes.');
+      alert(err.message || 'Failed to upload image.');
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleUrlPaste = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setFormData(prev => ({ 
+      ...prev, 
+      imageUrl: url,
+      image: url, // Sync legacy
+      imageSource: url ? 'EXTERNAL_URL' : 'GENERATED',
+      imageStatus: url ? 'REAL_IMAGE' : 'GENERATED_PLACEHOLDER'
+    }));
+  };
+
+  const handleRemoveImage = () => {
+    // Optionally call deleteProductImage(formData.imageUrl) here if we wanted to eagerly delete.
+    // For safety, we just unlink it.
+    setFormData(prev => ({ 
+      ...prev, 
+      imageUrl: '',
+      image: '',
+      imageSource: 'GENERATED',
+      imageStatus: 'GENERATED_PLACEHOLDER' 
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +104,7 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
         stockStatus: formData.stockStatus as 'in_stock' | 'low_stock' | 'out_of_stock',
         discount,
         slug,
+        imageUpdatedAt: Date.now(), // update timestamp for caching
         searchKeywords: formData.searchKeywords.split(',').map(k => k.trim()).filter(Boolean)
       });
     } catch (err) {
@@ -152,43 +187,93 @@ export default function ProductFormDialog({ product, onClose, onSave }: ProductF
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Product Image</label>
+            <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-4">
+              <label className="block text-sm font-bold text-slate-900">Product Image</label>
               
-              <div className="flex items-center gap-4">
-                {formData.image && (
-                  <div className="w-16 h-16 shrink-0 rounded-lg border border-stone-200 overflow-hidden bg-stone-50">
-                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
+              <div className="flex flex-col sm:flex-row items-start gap-6">
+                {/* Preview Area */}
+                <div className="w-full sm:w-40 aspect-square shrink-0 rounded-xl border border-stone-200 overflow-hidden bg-white flex items-center justify-center">
+                  {formData.imageUrl ? (
+                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl opacity-50">📷</span>
+                  )}
+                </div>
+
+                <div className="flex-1 w-full space-y-4">
+                  {/* Status Indicator */}
+                  <div className="flex items-center gap-2 text-xs font-bold">
+                    <span className="text-slate-500 uppercase tracking-wider">Status:</span>
+                    {formData.imageStatus === 'REAL_IMAGE' ? (
+                      <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded flex items-center gap-1">
+                        ✓ Real Image
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex items-center gap-1">
+                        ⚠ Generated Placeholder
+                      </span>
+                    )}
                   </div>
-                )}
-                <div className="flex-1">
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    className="hidden" 
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-sm font-bold text-slate-700 rounded-lg border border-stone-300 disabled:opacity-50"
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload from PC'}
-                  </button>
-                  <p className="text-xs text-slate-500 mt-1">Or paste a URL below</p>
+
+                  {/* Mode Tabs */}
+                  <div className="flex bg-stone-200/50 p-1 rounded-lg">
+                    <button 
+                      type="button" 
+                      onClick={() => setImageMode('upload')}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${imageMode === 'upload' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+                    >
+                      Upload from PC
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setImageMode('url')}
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${imageMode === 'url' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+                    >
+                      Image URL
+                    </button>
+                  </div>
+
+                  {/* Inputs */}
+                  {imageMode === 'upload' ? (
+                    <div>
+                      <input 
+                        type="file" 
+                        accept="image/jpeg, image/png, image/webp"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        className="hidden" 
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="w-full py-2 bg-white hover:bg-stone-50 text-sm font-bold text-slate-700 rounded-lg border border-stone-300 disabled:opacity-50"
+                      >
+                        {isUploading ? 'Uploading...' : 'Choose File'}
+                      </button>
+                    </div>
+                  ) : (
+                    <input 
+                      type="text" 
+                      value={formData.imageUrl} 
+                      onChange={handleUrlPaste} 
+                      className="w-full border-stone-300 rounded-lg p-2 text-sm" 
+                      placeholder="https://..." 
+                    />
+                  )}
+
+                  {/* Actions */}
+                  {formData.imageUrl && (
+                    <button 
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="text-xs font-bold text-red-600 hover:text-red-700 underline underline-offset-2"
+                    >
+                      Remove Image
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <input 
-                type="text" 
-                name="image" 
-                value={formData.image} 
-                onChange={handleChange} 
-                className="w-full border-stone-300 rounded-lg p-2 text-sm mt-2" 
-                placeholder="https://..." 
-              />
             </div>
             
             <div>

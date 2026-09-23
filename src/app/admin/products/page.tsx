@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { getProducts, addProduct, updateProduct, deleteProduct, deleteAllProducts, seedDemoProducts } from '@/lib/productService';
+import { getProducts, deleteProduct, deleteAllProducts, seedDemoProducts, saveProductGroup } from '@/lib/productService';
 import { parseAndImportCSV, CSV_HEADERS } from '@/lib/importService';
-import { Product } from '@/types';
+import { Product, ProductGroup } from '@/types';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import ProductFormDialog from '@/components/admin/ProductFormDialog';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, groupProductsByName } from '@/lib/utils';
+import { resolveProductImage } from '@/lib/imageResolver';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -18,7 +19,7 @@ export default function AdminProductsPage() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [firebaseConfigured, setFirebaseConfigured] = useState(true);
   
-  const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+  const [editingGroup, setEditingGroup] = useState<ProductGroup | undefined>();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,25 +96,22 @@ export default function AdminProductsPage() {
     document.body.removeChild(link);
   };
 
-  const handleSaveProduct = async (productData: Omit<Product, 'id'>) => {
-    if (editingProduct) {
-      await updateProduct(editingProduct.id, productData);
-    } else {
-      await addProduct(productData);
-    }
+  const handleSaveGroup = async (baseDetails: Partial<Product>, variants: Product[], deletedIds: string[]) => {
+    await saveProductGroup(baseDetails, variants, deletedIds);
     setIsFormOpen(false);
-    setEditingProduct(undefined);
+    setEditingGroup(undefined);
     fetchProducts();
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+  const handleDeleteGroup = async (group: ProductGroup) => {
+    if (!confirm(`Are you sure you want to delete all variants of ${group.name}?`)) return;
     try {
-      await deleteProduct(id);
+      // We could use a batch here, but Promise.all is fine for a small number of variants
+      await Promise.all(group.variants.map(v => deleteProduct(v.id)));
       fetchProducts();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete product');
+      alert('Failed to delete product group');
     }
   };
 
@@ -131,14 +129,20 @@ export default function AdminProductsPage() {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
-    const query = searchQuery.toLowerCase().trim();
-    return products.filter(p => 
-      p.name.toLowerCase().includes(query) || 
-      p.category.toLowerCase().includes(query) || 
-      p.brand.toLowerCase().includes(query)
-    );
+  const filteredGroups = useMemo(() => {
+    let filtered = products;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = products.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        p.category.toLowerCase().includes(query) || 
+        p.brand.toLowerCase().includes(query)
+      );
+    }
+    // We group them just like the storefront, but we don't filter out inactive variants!
+    // We want the admin to see everything. The standard groupProductsByName doesn't filter inactive, 
+    // it just groups them. Wait, let's just group them.
+    return groupProductsByName(filtered);
   }, [products, searchQuery]);
 
   if (!firebaseConfigured) {
@@ -234,7 +238,7 @@ export default function AdminProductsPage() {
             
             <button 
               onClick={() => {
-                setEditingProduct(undefined);
+                setEditingGroup(undefined);
                 setIsFormOpen(true);
               }}
               className="px-4 py-2 bg-[#F98866] text-white text-sm font-bold rounded-lg hover:bg-[#e56b46] shadow-sm flex items-center gap-2"
@@ -272,39 +276,50 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-stone-50 transition-colors">
-                    <td className="p-4">
-                      <div className="font-medium text-slate-900">{product.name}</div>
-                      <div className="text-xs text-slate-500">{product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`}</div>
+                {filteredGroups.map((group) => {
+                  const resolvedImage = resolveProductImage(group);
+                  return (
+                  <tr key={group.id} className="hover:bg-stone-50 transition-colors">
+                    <td className="p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden">
+                        {resolvedImage.type === 'image' ? (
+                          <img src={resolvedImage.src} alt={group.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xl">{resolvedImage.src}</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">{group.name}</div>
+                        <div className="text-xs text-slate-500">{group.variants.length} Variant{group.variants.length !== 1 ? 's' : ''}</div>
+                      </div>
                     </td>
                     <td className="p-4">
-                      <span className="px-2 py-1 bg-stone-100 rounded text-xs">{product.category}</span>
+                      <span className="px-2 py-1 bg-stone-100 rounded text-xs">{group.category}</span>
                     </td>
                     <td className="p-4 text-right font-bold text-slate-900">
-                      {formatPrice(product.sellingPrice)}
+                      From {formatPrice(group.minPrice)}
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${product.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}`}>
-                        {product.isActive ? 'Active' : 'Hidden'}
+                      <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-stone-100 text-stone-600">
+                        Group
                       </span>
                     </td>
                     <td className="p-4 text-right space-x-2">
                       <button 
-                        onClick={() => { setEditingProduct(product); setIsFormOpen(true); }}
+                        onClick={() => { setEditingGroup(group); setIsFormOpen(true); }}
                         className="text-indigo-600 hover:text-indigo-900 font-medium"
                       >
                         Edit
                       </button>
                       <button 
-                        onClick={() => handleDelete(product.id, product.name)}
+                        onClick={() => handleDeleteGroup(group)}
                         className="text-red-600 hover:text-red-900 font-medium"
                       >
-                        Delete
+                        Delete All
                       </button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -313,9 +328,9 @@ export default function AdminProductsPage() {
 
       {isFormOpen && (
         <ProductFormDialog 
-          product={editingProduct}
-          onClose={() => setIsFormOpen(false)}
-          onSave={handleSaveProduct}
+          group={editingGroup} 
+          onClose={() => { setIsFormOpen(false); setEditingGroup(undefined); }} 
+          onSave={handleSaveGroup} 
         />
       )}
     </div>

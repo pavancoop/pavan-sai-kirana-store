@@ -7,7 +7,8 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  writeBatch
 } from 'firebase/firestore';
 import { Product } from '@/types';
 import { demoProducts } from '@/data/demo-products';
@@ -64,6 +65,48 @@ export async function updateProduct(id: string, productUpdate: Partial<Product>)
     ...productUpdate,
     updatedAt: serverTimestamp(),
   }, { merge: true });
+}
+
+/**
+ * Save an entire Product Group using a batch write.
+ */
+export async function saveProductGroup(
+  baseDetails: Partial<Product>,
+  variants: Product[],
+  deletedVariantIds: string[]
+): Promise<void> {
+  if (!isFirebaseConfigured() || !db) {
+    throw new Error('Firebase is not configured');
+  }
+
+  const batch = writeBatch(db!);
+
+  // 1. Delete removed variants
+  deletedVariantIds.forEach(id => {
+    if (id && !id.startsWith('new_')) {
+      batch.delete(doc(db!, 'products', id));
+    }
+  });
+
+  // 2. Upsert variants
+  variants.forEach(variant => {
+    // Generate a new ID if it's a new variant
+    const isNew = !variant.id || variant.id.startsWith('new_');
+    const docRef = isNew ? doc(collection(db!, 'products')) : doc(db!, 'products', variant.id);
+
+    // Merge base details into the variant
+    const finalProduct = {
+      ...variant,
+      ...baseDetails,
+      id: docRef.id,
+      updatedAt: serverTimestamp(),
+      ...(isNew ? { createdAt: serverTimestamp() } : {})
+    };
+
+    batch.set(docRef, finalProduct, { merge: true });
+  });
+
+  await batch.commit();
 }
 
 /**

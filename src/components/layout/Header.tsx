@@ -4,8 +4,10 @@ import { useCart } from '@/context/CartContext';
 import { storeConfig } from '@/config/store';
 import { formatPrice } from '@/lib/utils';
 import { Product } from '@/types';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import { groupProductsByName } from '@/lib/utils';
+import VariantSelectorDialog from '@/components/products/VariantSelectorDialog';
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -17,6 +19,7 @@ interface HeaderProps {
 export default function Header({ onCartClick, onSearchChange, searchQuery, products = [] }: HeaderProps) {
   const { state, addItem, incrementItem, decrementItem, getItemQuantity } = useCart();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null); // For variant dialog
   const searchRefDesktop = useRef<HTMLDivElement>(null);
   const searchRefMobile = useRef<HTMLDivElement>(null);
 
@@ -32,13 +35,32 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const searchResults = searchQuery.trim() === '' ? [] : products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.searchKeywords && p.searchKeywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
-  ).slice(0, 15); // Show top 15 results
+  const searchResults = useMemo(() => {
+    if (searchQuery.trim() === '') return [];
+    
+    // First group all products
+    const grouped = groupProductsByName(products);
+    
+    // Then filter groups based on search query
+    const query = searchQuery.toLowerCase().trim();
+    return grouped.filter(g => {
+      // Check if group name matches
+      if (g.name.toLowerCase().includes(query)) return true;
+      // Or if any variant's keywords match
+      return g.variants.some(v => 
+        v.searchKeywords && v.searchKeywords.some(k => k.toLowerCase().includes(query))
+      );
+    }).slice(0, 10); // Show top 10 groups
+  }, [searchQuery, products]);
 
   return (
     <>
+      {selectedGroup && (
+        <VariantSelectorDialog 
+          group={selectedGroup} 
+          onClose={() => setSelectedGroup(null)} 
+        />
+      )}
       {/* Top Announcement Bar */}
       <div className="bg-[#FFF2D7] text-[#2c2416] text-[10px] sm:text-xs font-semibold py-1 sm:py-1.5 px-3 sm:px-4 border-b border-[#fed7aa]/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -109,35 +131,41 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
               {/* Autocomplete Dropdown */}
               {showDropdown && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-orange-100 overflow-hidden z-50">
-                  {searchResults.map((product) => {
-                    const quantity = getItemQuantity(product.id);
+                  {searchResults.map((group) => {
                     return (
-                      <div key={product.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 hover:bg-orange-50/50 transition-colors">
+                      <div key={group.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 hover:bg-orange-50/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl shrink-0">
-                            {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
+                            {group.image ? <img src={group.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-800 line-clamp-1">{product.name}</p>
+                            <p className="text-sm font-bold text-slate-800 line-clamp-1">{group.name}</p>
                             <p className="text-xs text-slate-500">
-                              {product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`} • {formatPrice(product.sellingPrice)}
+                              {group.variants.length > 1 ? `${group.variants.length} Options` : `${group.variants[0].weight}${String(group.variants[0].weight).toLowerCase().includes(group.variants[0].unit.toLowerCase()) ? '' : ` ${group.variants[0].unit}`}`} • {group.variants.length > 1 ? `Starts at ${formatPrice(group.minPrice)}` : formatPrice(group.minPrice)}
                             </p>
                           </div>
                         </div>
                         <div className="shrink-0 ml-2">
-                          {quantity === 0 ? (
+                          {group.variants.length === 1 && getItemQuantity(group.variants[0].id) > 0 ? (
+                            <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-7">
+                              <button onClick={() => decrementItem(group.variants[0].id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
+                              <span className="px-2 text-xs font-extrabold bg-[#e56b46] h-full flex items-center">{getItemQuantity(group.variants[0].id)}</span>
+                              <button onClick={() => addItem(group.variants[0])} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
+                            </div>
+                          ) : (
                             <button
-                              onClick={() => addItem(product)}
+                              onClick={() => {
+                                if (group.variants.length === 1) {
+                                  addItem(group.variants[0]);
+                                } else {
+                                  setSelectedGroup(group);
+                                  setShowDropdown(false); // Hide search dropdown when opening modal
+                                }
+                              }}
                               className="px-3 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-xs rounded-md hover:bg-[#F98866] hover:text-white transition-colors border border-[#fed7aa]"
                             >
-                              ADD
+                              {group.variants.length > 1 ? 'OPTIONS' : 'ADD'}
                             </button>
-                          ) : (
-                            <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-7">
-                              <button onClick={() => decrementItem(product.id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
-                              <span className="px-2 text-xs font-extrabold bg-[#e56b46] h-full flex items-center">{quantity}</span>
-                              <button onClick={() => addItem(product)} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
-                            </div>
                           )}
                         </div>
                       </div>
@@ -217,35 +245,41 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
             {/* Mobile Autocomplete Dropdown */}
             {showDropdown && searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-orange-100 overflow-hidden z-50 mx-3 max-h-[60vh] overflow-y-auto">
-                {searchResults.map((product) => {
-                  const quantity = getItemQuantity(product.id);
+                {searchResults.map((group) => {
                   return (
-                    <div key={product.id} className="flex items-center justify-between p-2.5 border-b border-slate-50 last:border-0 hover:bg-orange-50/50">
+                    <div key={group.id} className="flex items-center justify-between p-2.5 border-b border-slate-50 last:border-0 hover:bg-orange-50/50">
                       <div className="flex items-center gap-2.5 overflow-hidden">
                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl shrink-0">
-                          {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
+                          {group.image ? <img src={group.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-bold text-slate-800 truncate">{product.name}</p>
+                          <p className="text-[13px] font-bold text-slate-800 truncate">{group.name}</p>
                           <p className="text-[11px] text-slate-500">
-                            {product.weight}{String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : ` ${product.unit}`} • {formatPrice(product.sellingPrice)}
+                            {group.variants.length > 1 ? `${group.variants.length} Options` : `${group.variants[0].weight}${String(group.variants[0].weight).toLowerCase().includes(group.variants[0].unit.toLowerCase()) ? '' : ` ${group.variants[0].unit}`}`} • {group.variants.length > 1 ? `Starts at ${formatPrice(group.minPrice)}` : formatPrice(group.minPrice)}
                           </p>
                         </div>
                       </div>
                       <div className="shrink-0 ml-2">
-                        {quantity === 0 ? (
+                        {group.variants.length === 1 && getItemQuantity(group.variants[0].id) > 0 ? (
+                          <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-6">
+                            <button onClick={() => decrementItem(group.variants[0].id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
+                            <span className="px-1 text-[11px] font-extrabold bg-[#e56b46] h-full flex items-center">{getItemQuantity(group.variants[0].id)}</span>
+                            <button onClick={() => addItem(group.variants[0])} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
+                          </div>
+                        ) : (
                           <button
-                            onClick={() => addItem(product)}
+                            onClick={() => {
+                              if (group.variants.length === 1) {
+                                addItem(group.variants[0]);
+                              } else {
+                                setSelectedGroup(group);
+                                setShowDropdown(false); // Hide search dropdown when opening modal
+                              }
+                            }}
                             className="px-2.5 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-[11px] rounded-md hover:bg-[#F98866] hover:text-white border border-[#fed7aa]"
                           >
-                            ADD
+                            {group.variants.length > 1 ? 'OPTIONS' : 'ADD'}
                           </button>
-                        ) : (
-                          <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-6">
-                            <button onClick={() => decrementItem(product.id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
-                            <span className="px-1 text-[11px] font-extrabold bg-[#e56b46] h-full flex items-center">{quantity}</span>
-                            <button onClick={() => addItem(product)} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
-                          </div>
                         )}
                       </div>
                     </div>

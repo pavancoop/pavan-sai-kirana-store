@@ -1,8 +1,8 @@
-import { Product } from '@/types';
+import { ProductGroup } from '@/types';
 import ProductCard from './ProductCard';
 
 interface ProductGridProps {
-  products: Product[];
+  products: ProductGroup[];
   title?: string;
 }
 

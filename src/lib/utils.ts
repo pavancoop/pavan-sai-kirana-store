@@ -1,4 +1,44 @@
 import { storeConfig } from '@/config/store';
+import { Product, ProductGroup } from '@/types';
+
+export function groupProductsByName(products: Product[]): ProductGroup[] {
+  const groups = new Map<string, ProductGroup>();
+
+  products.forEach(product => {
+    // We group by the clean base name (lowercased)
+    const baseName = product.name.trim();
+    const groupKey = baseName.toLowerCase();
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        id: groupKey.replace(/[^a-z0-9]+/g, '-'),
+        name: baseName,
+        brand: product.brand,
+        category: product.category,
+        image: product.image,
+        variants: [],
+        minPrice: product.sellingPrice,
+        maxDiscount: product.discount,
+      });
+    }
+
+    const group = groups.get(groupKey)!;
+    group.variants.push(product);
+    
+    // Update min price and max discount
+    if (product.sellingPrice < group.minPrice) group.minPrice = product.sellingPrice;
+    if (product.discount > group.maxDiscount) group.maxDiscount = product.discount;
+    // Prefer image if current group has none
+    if (!group.image && product.image) group.image = product.image;
+  });
+
+  // Sort variants within each group (e.g. by selling price ascending, which loosely correlates to weight)
+  Array.from(groups.values()).forEach(group => {
+    group.variants.sort((a, b) => a.sellingPrice - b.sellingPrice);
+  });
+
+  return Array.from(groups.values());
+}
 
 export function formatPrice(price: number): string {
   return `${storeConfig.currency}${price.toFixed(0)}`;

@@ -19,6 +19,17 @@ export interface Product {
   slug: string;
 }
 
+export interface ProductGroup {
+  id: string; // generated from slug
+  name: string;
+  brand: string;
+  category: string;
+  image: string;
+  variants: Product[]; // The individual items (weights)
+  minPrice: number; // For "Starts from ₹XX" display
+  maxDiscount: number;
+}
+
 export interface Category {
   id: string;
   name: string;

@@ -227,7 +227,7 @@ export default function ProductFormDialog({ group, onClose, onSave }: ProductFor
                   <select name="category" value={baseData.category} onChange={handleBaseChange} required className="w-full border-stone-300 rounded-lg p-2 text-sm">
                     <option value="">Select Category</option>
                     {categories.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </div>

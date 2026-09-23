@@ -3,15 +3,39 @@
 import { useCart } from '@/context/CartContext';
 import { storeConfig } from '@/config/store';
 import { formatPrice } from '@/lib/utils';
+import { Product } from '@/types';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 
 interface HeaderProps {
   onCartClick: () => void;
   onSearchChange: (query: string) => void;
   searchQuery: string;
+  products?: Product[];
 }
 
-export default function Header({ onCartClick, onSearchChange, searchQuery }: HeaderProps) {
-  const { state } = useCart();
+export default function Header({ onCartClick, onSearchChange, searchQuery, products = [] }: HeaderProps) {
+  const { state, addItem, incrementItem, decrementItem, getItemQuantity } = useCart();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRefDesktop = useRef<HTMLDivElement>(null);
+  const searchRefMobile = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRefDesktop.current && !searchRefDesktop.current.contains(event.target as Node) &&
+          searchRefMobile.current && !searchRefMobile.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchResults = searchQuery.trim() === '' ? [] : products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.searchKeywords && p.searchKeywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase())))
+  ).slice(0, 5); // Show top 5 results
 
   return (
     <>
@@ -55,7 +79,7 @@ export default function Header({ onCartClick, onSearchChange, searchQuery }: Hea
           </a>
 
           {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-xl relative">
+          <div ref={searchRefDesktop} className="hidden md:flex flex-1 max-w-xl relative">
             <div className="relative w-full">
               <svg className="absolute left-4 top-3 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -64,18 +88,60 @@ export default function Header({ onCartClick, onSearchChange, searchQuery }: Hea
                 type="text"
                 placeholder="Search 'pesara pappu', 'rice', 'dal', 'oil', 'biscuit'..."
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  setShowDropdown(true);
+                }}
                 className="w-full bg-[#FFFDF9] border border-orange-200 rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#F98866] focus:border-transparent transition-all shadow-inner"
               />
               {searchQuery && (
                 <button
-                  onClick={() => onSearchChange('')}
+                  onClick={() => { onSearchChange(''); setShowDropdown(false); }}
                   className="absolute right-3.5 top-2.5 bg-slate-200 text-slate-600 rounded-full p-1 hover:bg-slate-300"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+              )}
+
+              {/* Autocomplete Dropdown */}
+              {showDropdown && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-orange-100 overflow-hidden z-50">
+                  {searchResults.map((product) => {
+                    const quantity = getItemQuantity(product.id);
+                    return (
+                      <div key={product.id} className="flex items-center justify-between p-3 border-b border-slate-50 last:border-0 hover:bg-orange-50/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl shrink-0">
+                            {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 line-clamp-1">{product.name}</p>
+                            <p className="text-xs text-slate-500">{product.weight} {product.unit} • {formatPrice(product.sellingPrice)}</p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 ml-2">
+                          {quantity === 0 ? (
+                            <button
+                              onClick={() => addItem(product)}
+                              className="px-3 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-xs rounded-md hover:bg-[#F98866] hover:text-white transition-colors border border-[#fed7aa]"
+                            >
+                              ADD
+                            </button>
+                          ) : (
+                            <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-7">
+                              <button onClick={() => decrementItem(product.id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
+                              <span className="px-2 text-xs font-extrabold bg-[#e56b46] h-full flex items-center">{quantity}</span>
+                              <button onClick={() => addItem(product)} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -119,7 +185,7 @@ export default function Header({ onCartClick, onSearchChange, searchQuery }: Hea
         </div>
 
         {/* Mobile Search Bar - Always visible */}
-        <div className="md:hidden px-3 pb-2 pt-1 border-t border-orange-50 bg-white">
+        <div ref={searchRefMobile} className="md:hidden px-3 pb-2 pt-1 border-t border-orange-50 bg-white relative">
           <div className="relative w-full">
             <svg className="absolute left-3 top-2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -128,18 +194,60 @@ export default function Header({ onCartClick, onSearchChange, searchQuery }: Hea
               type="text"
               placeholder="Search groceries (e.g. pappu, rice, oil)..."
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onFocus={() => setShowDropdown(true)}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setShowDropdown(true);
+              }}
               className="w-full bg-[#FFFDF9] border border-orange-200 rounded-full py-2 pl-9 pr-8 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#F98866]"
             />
             {searchQuery && (
               <button
-                onClick={() => onSearchChange('')}
+                onClick={() => { onSearchChange(''); setShowDropdown(false); }}
                 className="absolute right-3 top-2.5 bg-slate-200 text-slate-600 rounded-full p-0.5"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            )}
+            
+            {/* Mobile Autocomplete Dropdown */}
+            {showDropdown && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-orange-100 overflow-hidden z-50 mx-3 max-h-[60vh] overflow-y-auto">
+                {searchResults.map((product) => {
+                  const quantity = getItemQuantity(product.id);
+                  return (
+                    <div key={product.id} className="flex items-center justify-between p-2.5 border-b border-slate-50 last:border-0 hover:bg-orange-50/50">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-xl shrink-0">
+                          {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover rounded-lg" /> : '🛒'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-slate-800 truncate">{product.name}</p>
+                          <p className="text-[11px] text-slate-500">{product.weight} {product.unit} • {formatPrice(product.sellingPrice)}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 ml-2">
+                        {quantity === 0 ? (
+                          <button
+                            onClick={() => addItem(product)}
+                            className="px-2.5 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-[11px] rounded-md hover:bg-[#F98866] hover:text-white border border-[#fed7aa]"
+                          >
+                            ADD
+                          </button>
+                        ) : (
+                          <div className="flex items-center bg-[#F98866] text-white rounded-md overflow-hidden shadow-sm h-6">
+                            <button onClick={() => decrementItem(product.id)} className="px-2 font-bold hover:bg-[#e56b46] h-full">-</button>
+                            <span className="px-1 text-[11px] font-extrabold bg-[#e56b46] h-full flex items-center">{quantity}</span>
+                            <button onClick={() => addItem(product)} className="px-2 font-bold hover:bg-[#e56b46] h-full">+</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

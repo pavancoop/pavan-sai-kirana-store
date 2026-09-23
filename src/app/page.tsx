@@ -110,6 +110,7 @@ export default function Home() {
           onCartClick={() => setIsCartOpen(true)}
           onSearchChange={setSearchQuery}
           searchQuery={searchQuery}
+          products={products}
         />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
           <OrderConfirmation
@@ -128,6 +129,7 @@ export default function Home() {
         onCartClick={() => setIsCartOpen(true)}
         onSearchChange={setSearchQuery}
         searchQuery={searchQuery}
+        products={products}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-4 sm:space-y-6 md:space-y-8">

@@ -78,6 +78,22 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 /**
+ * Delete all products.
+ */
+export async function deleteAllProducts(): Promise<void> {
+  if (!isFirebaseConfigured() || !db) {
+    throw new Error('Firebase is not configured');
+  }
+
+  const productsRef = collection(db, 'products');
+  const snapshot = await getDocs(productsRef);
+  
+  // Use Promise.all with chunks or direct deleteDoc for simplicity
+  const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db!, 'products', docSnap.id)));
+  await Promise.all(deletePromises);
+}
+
+/**
  * Seed database with demo products if empty.
  */
 export async function seedDemoProducts(): Promise<void> {

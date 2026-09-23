@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { getProducts, addProduct, updateProduct, deleteProduct, seedDemoProducts } from '@/lib/productService';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { getProducts, addProduct, updateProduct, deleteProduct, deleteAllProducts, seedDemoProducts } from '@/lib/productService';
 import { parseAndImportCSV, CSV_HEADERS } from '@/lib/importService';
 import { Product } from '@/types';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -10,10 +10,12 @@ import { formatPrice } from '@/lib/utils';
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [firebaseConfigured, setFirebaseConfigured] = useState(true);
   
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
@@ -115,6 +117,30 @@ export default function AdminProductsPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!confirm('WARNING: Are you absolutely sure you want to delete ALL products? This action cannot be undone.')) return;
+    setIsDeletingAll(true);
+    try {
+      await deleteAllProducts();
+      await fetchProducts();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete all products');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase().trim();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(query) || 
+      p.category.toLowerCase().includes(query) || 
+      p.brand.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
   if (!firebaseConfigured) {
     return (
       <div className="space-y-6">
@@ -135,22 +161,34 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Products</h1>
           <p className="text-slate-500 text-sm mt-1">Manage your catalog and inventory</p>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={fetchProducts}
-            disabled={isLoading}
-            className="px-4 py-2 bg-white border border-stone-200 text-sm font-bold text-slate-700 rounded-lg hover:bg-stone-50 shadow-sm disabled:opacity-50"
-          >
-            Refresh
-          </button>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search Bar */}
+          <div className="relative max-w-sm w-full">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input 
+              type="text" 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#F98866]"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={fetchProducts}
+              disabled={isLoading}
+              className="px-4 py-2 bg-white border border-stone-200 text-sm font-bold text-slate-700 rounded-lg hover:bg-stone-50 shadow-sm disabled:opacity-50"
+            >
+              Refresh
+            </button>
+            
             <button 
               disabled={isImporting}
               onClick={() => fileInputRef.current?.click()}
@@ -169,31 +207,42 @@ export default function AdminProductsPage() {
             
             <button 
               onClick={downloadTemplate} 
-              className="text-xs font-bold text-slate-500 hover:text-[#F98866] underline decoration-stone-300 hover:decoration-[#F98866] underline-offset-4"
+              className="text-xs font-bold text-slate-500 hover:text-[#F98866] underline decoration-stone-300 hover:decoration-[#F98866] underline-offset-4 hidden lg:block"
             >
-              Download Template
+              Template
+            </button>
+
+            {products.length > 0 && (
+              <button 
+                onClick={handleDeleteAll}
+                disabled={isDeletingAll}
+                className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 text-sm font-bold rounded-lg hover:bg-red-100 shadow-sm flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDeletingAll ? 'Deleting...' : 'Delete All'}
+              </button>
+            )}
+
+            {products.length === 0 && !isLoading && (
+              <button 
+                onClick={handleSeed}
+                disabled={isSeeding}
+                className="px-4 py-2 bg-amber-100 text-amber-800 text-sm font-bold rounded-lg hover:bg-amber-200 shadow-sm"
+              >
+                {isSeeding ? 'Loading...' : 'Demo Data'}
+              </button>
+            )}
+            
+            <button 
+              onClick={() => {
+                setEditingProduct(undefined);
+                setIsFormOpen(true);
+              }}
+              className="px-4 py-2 bg-[#F98866] text-white text-sm font-bold rounded-lg hover:bg-[#e56b46] shadow-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              Add Product
             </button>
           </div>
-
-          {products.length === 0 && !isLoading && (
-            <button 
-              onClick={handleSeed}
-              disabled={isSeeding}
-              className="px-4 py-2 bg-amber-100 text-amber-800 text-sm font-bold rounded-lg hover:bg-amber-200 shadow-sm"
-            >
-              {isSeeding ? 'Loading...' : 'Load Demo Data'}
-            </button>
-          )}
-          <button 
-            onClick={() => {
-              setEditingProduct(undefined);
-              setIsFormOpen(true);
-            }}
-            className="px-4 py-2 bg-[#F98866] text-white text-sm font-bold rounded-lg hover:bg-[#e56b46] shadow-sm flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-            Add Product
-          </button>
         </div>
       </div>
 
@@ -223,7 +272,7 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-200">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.id} className="hover:bg-stone-50 transition-colors">
                     <td className="p-4">
                       <div className="font-medium text-slate-900">{product.name}</div>

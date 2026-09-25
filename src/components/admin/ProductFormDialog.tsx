@@ -26,6 +26,7 @@ export default function ProductFormDialog({ group, onClose, onSave }: ProductFor
     imageSource: group?.imageSource || (group?.image ? 'FIREBASE' : 'GENERATED'),
     imageStatus: group?.imageStatus || (group?.image ? 'REAL_IMAGE' : 'GENERATED_PLACEHOLDER'),
     additionalImages: group?.additionalImages || [],
+    sellingMode: group?.sellingMode || group?.variants?.[0]?.sellingMode || 'PACKAGED',
     description: group?.variants?.[0]?.description || '',
     searchKeywords: group?.variants?.[0]?.searchKeywords?.join(', ') || '',
   });
@@ -182,6 +183,7 @@ export default function ProductFormDialog({ group, onClose, onSave }: ProductFor
         imageSource: baseData.imageSource,
         imageStatus: baseData.imageStatus,
         additionalImages: baseData.additionalImages,
+        sellingMode: baseData.sellingMode as 'PACKAGED' | 'LOOSE',
         description: baseData.description,
         searchKeywords,
         slug,
@@ -235,7 +237,14 @@ export default function ProductFormDialog({ group, onClose, onSave }: ProductFor
                   <label className="block text-sm font-bold text-slate-700 mb-1">Subcategory</label>
                   <input type="text" name="subcategory" value={baseData.subcategory} onChange={handleBaseChange} className="w-full border-stone-300 rounded-lg p-2 text-sm" placeholder="e.g., Rice" />
                 </div>
-                <div className="col-span-2">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Selling Mode</label>
+                  <select name="sellingMode" value={baseData.sellingMode} onChange={handleBaseChange} required className="w-full border-stone-300 rounded-lg p-2 text-sm">
+                    <option value="PACKAGED">Packaged Item</option>
+                    <option value="LOOSE">Loose / Sold by Weight</option>
+                  </select>
+                </div>
+                <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-1">Search Keywords (comma separated)</label>
                   <input type="text" name="searchKeywords" value={baseData.searchKeywords} onChange={handleBaseChange} className="w-full border-stone-300 rounded-lg p-2 text-sm" placeholder="e.g., rice, sona masoori, kurnool" />
                 </div>
@@ -321,10 +330,10 @@ export default function ProductFormDialog({ group, onClose, onSave }: ProductFor
                         <input type="text" value={variant.unit} onChange={(e) => handleVariantChange(index, 'unit', e.target.value)} required className="w-full border-stone-300 rounded p-1.5 text-sm" placeholder="g" />
                       </td>
                       <td className="py-2 pr-2">
-                        <input type="number" value={variant.mrp} onChange={(e) => handleVariantChange(index, 'mrp', Number(e.target.value))} required className="w-full border-stone-300 rounded p-1.5 text-sm" />
+                        <input type="number" value={variant.mrp === 0 ? '' : variant.mrp} onChange={(e) => handleVariantChange(index, 'mrp', e.target.value === '' ? '' : Number(e.target.value))} required className="w-full border-stone-300 rounded p-1.5 text-sm" placeholder="0" />
                       </td>
                       <td className="py-2 pr-2">
-                        <input type="number" value={variant.sellingPrice} onChange={(e) => handleVariantChange(index, 'sellingPrice', Number(e.target.value))} required className="w-full border-stone-300 rounded p-1.5 text-sm" />
+                        <input type="number" value={variant.sellingPrice === 0 ? '' : variant.sellingPrice} onChange={(e) => handleVariantChange(index, 'sellingPrice', e.target.value === '' ? '' : Number(e.target.value))} required className="w-full border-stone-300 rounded p-1.5 text-sm" placeholder="0" />
                       </td>
                       <td className="py-2 pr-2">
                         <select value={variant.stockStatus} onChange={(e) => handleVariantChange(index, 'stockStatus', e.target.value)} className="w-full border-stone-300 rounded p-1.5 text-sm">

@@ -39,6 +39,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   🏷️ Products
                 </Link>
                 <Link 
+                  href="/admin/calculator"
+                  className={`px-4 py-2 rounded-lg ${pathname.includes('/calculator') ? 'bg-white/10' : 'hover:bg-white/10'} text-sm font-bold transition-colors whitespace-nowrap`}
+                >
+                  🧮 Calculator
+                </Link>
+                <Link 
                   href="/"
                   className="px-4 py-2 rounded-lg hover:bg-white/10 text-sm font-bold text-slate-400 hover:text-white transition-colors whitespace-nowrap"
                 >

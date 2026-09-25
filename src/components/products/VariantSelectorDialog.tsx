@@ -1,6 +1,6 @@
 'use client';
 
-import { ProductGroup, Product } from '@/types';
+import { ProductGroup } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { resolveProductImage } from '@/lib/imageResolver';
@@ -8,12 +8,26 @@ import { useState, useEffect } from 'react';
 
 interface VariantSelectorDialogProps {
   group: ProductGroup;
+  initialVariantId?: string;
   onClose: () => void;
 }
 
-export default function VariantSelectorDialog({ group, onClose }: VariantSelectorDialogProps) {
-  const { addItem, decrementItem, getItemQuantity } = useCart();
+export default function VariantSelectorDialog({ group, initialVariantId, onClose }: VariantSelectorDialogProps) {
+  const { addItem, incrementItem, decrementItem, getItemQuantity } = useCart();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Initialize local quantities state
+  const [localQuantities, setLocalQuantities] = useState<Record<string, number>>(() => {
+    const qtys: Record<string, number> = {};
+    group.variants.forEach(v => {
+      qtys[v.id] = getItemQuantity(v.id);
+    });
+    // Add 1 to the initial variant if it was just clicked
+    if (initialVariantId) {
+      qtys[initialVariantId] = (qtys[initialVariantId] || 0) + 1;
+    }
+    return qtys;
+  });
 
   // Prevent background scroll when open
   useEffect(() => {
@@ -25,6 +39,48 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
   const allImages = [];
   if (resolvedImage.type === 'image') allImages.push(resolvedImage.src);
   if (group.additionalImages) allImages.push(...group.additionalImages);
+
+  const handleLocalIncrement = (variantId: string) => {
+    setLocalQuantities(prev => ({
+      ...prev,
+      [variantId]: (prev[variantId] || 0) + 1
+    }));
+  };
+
+  const handleLocalDecrement = (variantId: string) => {
+    setLocalQuantities(prev => ({
+      ...prev,
+      [variantId]: Math.max(0, (prev[variantId] || 0) - 1)
+    }));
+  };
+
+  const handleConfirm = () => {
+    // Sync local quantities with global cart
+    group.variants.forEach(v => {
+      const globalQty = getItemQuantity(v.id);
+      const localQty = localQuantities[v.id] || 0;
+      const diff = localQty - globalQty;
+      
+      if (diff > 0) {
+        // We use addItem for the first addition (which pushes to cart array)
+        // For remaining additions we can use incrementItem
+        for (let i = 0; i < diff; i++) {
+          if (globalQty + i === 0) {
+            addItem(v);
+          } else {
+            incrementItem(v.id);
+          }
+        }
+      } else if (diff < 0) {
+        for (let i = 0; i < Math.abs(diff); i++) decrementItem(v.id);
+      }
+    });
+    onClose();
+  };
+
+  // Calculate totals for the sticky footer
+  const localTotalItems = group.variants.reduce((sum, v) => sum + (localQuantities[v.id] || 0), 0);
+  const localTotalPrice = group.variants.reduce((sum, v) => sum + ((localQuantities[v.id] || 0) * v.sellingPrice), 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
@@ -80,9 +136,9 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
         )}
 
         {/* Variants List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-[80px]">
           {group.variants.map((product) => {
-            const quantity = getItemQuantity(product.id);
+            const quantity = localQuantities[product.id] || 0;
             const isOutOfStock = product.stockStatus === 'out_of_stock';
 
             return (
@@ -112,7 +168,7 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
                     <span className="text-[10px] font-extrabold text-red-500 uppercase">Out of Stock</span>
                   ) : quantity === 0 ? (
                     <button
-                      onClick={() => addItem(product)}
+                      onClick={() => handleLocalIncrement(product.id)}
                       className="w-[72px] h-8 bg-white border border-[#fed7aa] text-[#c24b27] font-extrabold text-xs rounded-lg shadow-sm hover:bg-orange-50 active:scale-95 transition-all"
                     >
                       ADD
@@ -120,14 +176,14 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
                   ) : (
                     <div className="w-[84px] h-8 flex items-center justify-between bg-[#F98866] text-white rounded-lg shadow-sm overflow-hidden font-bold">
                       <button 
-                        onClick={() => decrementItem(product.id)} 
+                        onClick={() => handleLocalDecrement(product.id)} 
                         className="w-8 h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] transition-colors"
                       >
                         -
                       </button>
                       <span className="text-xs w-5 text-center">{quantity}</span>
                       <button 
-                        onClick={() => addItem(product)} 
+                        onClick={() => handleLocalIncrement(product.id)} 
                         className="w-8 h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] transition-colors"
                       >
                         +
@@ -138,6 +194,24 @@ export default function VariantSelectorDialog({ group, onClose }: VariantSelecto
               </div>
             );
           })}
+        </div>
+        
+        {/* Sticky Footer */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <button
+            onClick={handleConfirm}
+            className="w-full py-3.5 px-4 rounded-full font-extrabold text-sm flex items-center justify-center gap-2 bg-[#F98866] text-white hover:bg-[#e56b46] shadow-md transition-all active:scale-95"
+          >
+            {localTotalItems > 0 ? (
+              <>
+                <span>Add {localTotalItems} item{localTotalItems > 1 ? 's' : ''}</span>
+                <span className="opacity-50">•</span>
+                <span>Total {formatPrice(localTotalPrice)}</span>
+              </>
+            ) : (
+              <span>Close</span>
+            )}
+          </button>
         </div>
       </div>
     </div>

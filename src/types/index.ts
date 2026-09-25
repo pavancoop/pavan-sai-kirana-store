@@ -16,6 +16,7 @@ export interface Product {
   imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
   imageUpdatedAt?: number;
   additionalImages?: string[];
+  sellingMode?: 'PACKAGED' | 'LOOSE';
   stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock';
   stockQuantity: number;
   description: string;
@@ -35,6 +36,7 @@ export interface ProductGroup {
   imageStatus?: 'REAL_IMAGE' | 'GENERATED_PLACEHOLDER' | 'CATEGORY_FALLBACK';
   imageUpdatedAt?: number;
   additionalImages?: string[];
+  sellingMode?: 'PACKAGED' | 'LOOSE';
   variants: Product[]; // The individual items (weights)
   minPrice: number; // For "Starts from ₹XX" display
   maxDiscount: number;

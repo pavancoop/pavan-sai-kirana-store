@@ -58,6 +58,10 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
       {selectedGroup && (
         <VariantSelectorDialog 
           group={selectedGroup} 
+          initialVariantId={(() => {
+            const sorted = [...selectedGroup.variants].sort((a: Product, b: Product) => a.sellingPrice - b.sellingPrice);
+            return sorted[0].id;
+          })()}
           onClose={() => setSelectedGroup(null)} 
         />
       )}
@@ -164,7 +168,7 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
                               }}
                               className="px-3 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-xs rounded-md hover:bg-[#F98866] hover:text-white transition-colors border border-[#fed7aa]"
                             >
-                              {group.variants.length > 1 ? 'OPTIONS' : 'ADD'}
+                              ADD
                             </button>
                           )}
                         </div>
@@ -278,7 +282,7 @@ export default function Header({ onCartClick, onSearchChange, searchQuery, produ
                             }}
                             className="px-2.5 py-1.5 bg-[#FFF2D7] text-[#c24b27] font-bold text-[11px] rounded-md hover:bg-[#F98866] hover:text-white border border-[#fed7aa]"
                           >
-                            {group.variants.length > 1 ? 'OPTIONS' : 'ADD'}
+                            ADD
                           </button>
                         )}
                       </div>

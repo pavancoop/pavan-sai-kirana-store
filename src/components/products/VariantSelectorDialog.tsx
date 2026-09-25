@@ -4,7 +4,7 @@ import { ProductGroup } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { resolveProductImage } from '@/lib/imageResolver';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface VariantSelectorDialogProps {
   group: ProductGroup;
@@ -15,6 +15,7 @@ interface VariantSelectorDialogProps {
 export default function VariantSelectorDialog({ group, initialVariantId, onClose }: VariantSelectorDialogProps) {
   const { addItem, incrementItem, decrementItem, getItemQuantity } = useCart();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Initialize local quantities state
   const [localQuantities, setLocalQuantities] = useState<Record<string, number>>(() => {
@@ -28,6 +29,25 @@ export default function VariantSelectorDialog({ group, initialVariantId, onClose
     }
     return qtys;
   });
+
+  // Auto-scroll images
+  useEffect(() => {
+    const numImages = group.additionalImages ? group.additionalImages.length + 1 : 1;
+    if (numImages <= 1) return;
+    
+    const interval = setInterval(() => {
+      if (carouselRef.current) {
+        const { scrollLeft, clientWidth, scrollWidth } = carouselRef.current;
+        const nextScrollLeft = scrollLeft + clientWidth;
+        if (nextScrollLeft >= scrollWidth - 10) {
+          carouselRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          carouselRef.current.scrollTo({ left: nextScrollLeft, behavior: 'smooth' });
+        }
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [group.additionalImages]);
 
   // Prevent background scroll when open
   useEffect(() => {
@@ -85,7 +105,7 @@ export default function VariantSelectorDialog({ group, initialVariantId, onClose
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
       <div 
-        className="w-full sm:w-[400px] max-h-[90vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200"
+        className="w-full sm:w-[480px] max-h-[90vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -108,6 +128,7 @@ export default function VariantSelectorDialog({ group, initialVariantId, onClose
         {allImages.length > 0 ? (
           <div className="w-full aspect-[4/3] bg-stone-50 relative border-b border-stone-100 flex-shrink-0 group overflow-hidden">
             <div 
+              ref={carouselRef}
               className="flex w-full h-full transition-transform duration-300 ease-out snap-x snap-mandatory overflow-x-auto scrollbar-hide"
               onScroll={(e) => {
                 const scrollLeft = (e.target as HTMLDivElement).scrollLeft;
@@ -136,8 +157,8 @@ export default function VariantSelectorDialog({ group, initialVariantId, onClose
         )}
 
         {/* Variants List */}
-        <div className="flex-1 overflow-y-auto p-3 pb-[80px]">
-          <div className="grid grid-cols-3 gap-2">
+        <div className="flex-1 overflow-y-auto p-2 pb-[110px] sm:p-4 sm:pb-[110px]">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {group.variants.map((product) => {
               const quantity = localQuantities[product.id] || 0;
               const isOutOfStock = product.stockStatus === 'out_of_stock';

@@ -136,64 +136,65 @@ export default function VariantSelectorDialog({ group, initialVariantId, onClose
         )}
 
         {/* Variants List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-[80px]">
-          {group.variants.map((product) => {
-            const quantity = localQuantities[product.id] || 0;
-            const isOutOfStock = product.stockStatus === 'out_of_stock';
+        <div className="flex-1 overflow-y-auto p-3 pb-[80px]">
+          <div className="grid grid-cols-3 gap-2">
+            {group.variants.map((product) => {
+              const quantity = localQuantities[product.id] || 0;
+              const isOutOfStock = product.stockStatus === 'out_of_stock';
 
-            return (
-              <div 
-                key={product.id} 
-                className={`flex items-center justify-between p-3 rounded-xl border ${quantity > 0 ? 'border-orange-300 bg-orange-50/30' : 'border-slate-200'} transition-all`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-800 text-sm">{product.weight} {String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : product.unit}</span>
+              return (
+                <div 
+                  key={product.id} 
+                  className={`flex flex-col p-2.5 rounded-xl border ${quantity > 0 ? 'border-[#F98866] bg-orange-50/40 shadow-sm' : 'border-stone-200 bg-white hover:border-orange-200'} transition-all`}
+                >
+                  <div className="flex flex-col items-start gap-1 mb-1.5">
+                    <span className="font-extrabold text-slate-800 text-[13px] leading-none pt-0.5">{product.weight} {String(product.weight).toLowerCase().includes(product.unit.toLowerCase()) ? '' : product.unit}</span>
                     {product.discount > 0 && (
-                      <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md">
+                      <span className="text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded flex-shrink-0">
                         {product.discount}% OFF
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="font-extrabold text-[#F98866]">{formatPrice(product.sellingPrice)}</span>
+                  
+                  <div className="flex flex-col items-start gap-0.5 mb-2.5">
+                    <span className="font-black text-[#c24b27] text-sm leading-none">{formatPrice(product.sellingPrice)}</span>
                     {product.mrp > product.sellingPrice && (
-                      <span className="text-xs text-slate-400 line-through">{formatPrice(product.mrp)}</span>
+                      <span className="text-[9px] text-slate-400 line-through leading-none">{formatPrice(product.mrp)}</span>
+                    )}
+                  </div>
+
+                  <div className="mt-auto">
+                    {isOutOfStock ? (
+                      <div className="w-full h-7 flex items-center justify-center bg-stone-100 text-stone-400 font-bold text-[10px] rounded-lg uppercase tracking-wider">Out</div>
+                    ) : quantity === 0 ? (
+                      <button
+                        onClick={() => handleLocalIncrement(product.id)}
+                        className="w-full h-7 bg-[#FFF2D7] border border-[#fed7aa] text-[#c24b27] font-extrabold text-[11px] rounded-lg shadow-sm hover:bg-[#F98866] hover:text-white transition-colors"
+                      >
+                        ADD
+                      </button>
+                    ) : (
+                      <div className="w-full h-7 flex items-center justify-between bg-[#F98866] text-white rounded-lg shadow-sm font-bold">
+                        <button 
+                          onClick={() => handleLocalDecrement(product.id)} 
+                          className="w-[30%] h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] rounded-l-lg transition-colors text-sm"
+                        >
+                          -
+                        </button>
+                        <span className="text-[11px] text-center flex-1">{quantity}</span>
+                        <button 
+                          onClick={() => handleLocalIncrement(product.id)} 
+                          className="w-[30%] h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] rounded-r-lg transition-colors text-sm"
+                        >
+                          +
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
-
-                <div className="shrink-0 w-[84px] flex justify-end">
-                  {isOutOfStock ? (
-                    <span className="text-[10px] font-extrabold text-red-500 uppercase">Out of Stock</span>
-                  ) : quantity === 0 ? (
-                    <button
-                      onClick={() => handleLocalIncrement(product.id)}
-                      className="w-[72px] h-8 bg-white border border-[#fed7aa] text-[#c24b27] font-extrabold text-xs rounded-lg shadow-sm hover:bg-orange-50 active:scale-95 transition-all"
-                    >
-                      ADD
-                    </button>
-                  ) : (
-                    <div className="w-[84px] h-8 flex items-center justify-between bg-[#F98866] text-white rounded-lg shadow-sm overflow-hidden font-bold">
-                      <button 
-                        onClick={() => handleLocalDecrement(product.id)} 
-                        className="w-8 h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] transition-colors"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs w-5 text-center">{quantity}</span>
-                      <button 
-                        onClick={() => handleLocalIncrement(product.id)} 
-                        className="w-8 h-full flex items-center justify-center hover:bg-[#e56b46] active:bg-[#d45a36] transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
         
         {/* Sticky Footer */}
